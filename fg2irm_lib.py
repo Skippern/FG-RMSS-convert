@@ -85,8 +85,8 @@ except:
 __tables = root.find("Tables")
 
 for table in __tables:
-    printf(etree.tostring(table), 0)
-    printf(table.tag)
+#    printf(etree.tostring(table), 0)
+#    printf(table.tag)
     __filename = __DATA + 'tables/' + table.tag + '.json'
 
     __table_data = {}
@@ -96,12 +96,32 @@ for table in __tables:
     __table_data['class'] = table.find("Class").text
     __table_data['sort'] = table.find("SortOrder").text
 
+    __columns = table.find("Columns")
+#    __table_data['column names'] = etree.tostring(__columns.find("id-00001"))
+    __table_data['column'] = {}
+    for col in __columns:
+        __table_data['column'][col.tag] = {}
+        __table_data['column'][col.tag]['id'] = col.find("Id").text
+        __table_data['column'][col.tag]['title'] = col.find("Title").text
+#        print etree.tostring(col)
 
+    __chart = table.find("Chart")
+#    __table_data['chart'] = etree.tostring(__chart)
+    __table_data['table'] = {}
+    for tbl in __chart:
+        __table_data['table'][tbl.tag] = {}
+        __table_data['table'][tbl.tag]["roll"] = tbl.find("Roll").text
+        __entries = tbl.find("Entries")
+        __table_data['table'][tbl.tag]["entries"] = {}
+        for e in __entries:
+            __table_data['table'][tbl.tag]['entries'][e.tag] = {}
+            __table_data['table'][tbl.tag]['entries'][e.tag]['cid'] = e.find("ColumnId").text
+            __table_data['table'][tbl.tag]['entries'][e.tag]['text'] = e.find("Text").text
+#        print etree.tostring(__entries)
 
-    __table_data['xml'] = etree.tostring(table)
 
     f = open(__filename, 'wb')
-    f.write(json.dumps( __table_data , indent=3))
+    f.write(json.dumps( __table_data , indent=3, sort_keys=True))
     f.close()
 
     ## We now have extracted tables from the XML and are ready to create a matrix of values
