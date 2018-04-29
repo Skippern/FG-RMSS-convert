@@ -313,6 +313,8 @@ try:
             __npc_data["aq"] = None
         try:
             __npc_data["critmod"] = npc.find("critmod").text
+            if __npc_data["critmod"] == "1":
+                __npc_data["critmod"] = None
         except:
             __npc_data["critmod"] = None
         try:
