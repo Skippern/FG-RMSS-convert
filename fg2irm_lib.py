@@ -129,6 +129,11 @@ try:
                             __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['no_parry'] = int(eff.find("NoParry").text)
                             __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['bleed'] = int(eff.find("Bleed").text)
                             __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['penalty'] = int(eff.find("Penalty").text)
+                            __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['penalty_rounds'] = int(eff.find("Penalty Rounds").text)
+                            __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['bonus'] = int(eff.find("Bonus").text)
+                            __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['bonus_rounds'] = int(eff.find("Bonus Rounds").text)
+                            __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['corruption'] = int(eff.find("Corruption").text)
+                            __table_data['table'][tbl.tag]['entries'][e.tag]['effect']['powerpoints'] = int(eff.find("Power Points").text)
                     except:
                         pass
             except:
@@ -142,85 +147,103 @@ except:
 try:
     __reference = root.find("reference")
     __professions = __reference.find("professions")
-    __professions_data = {}
-    for prof in __professions:
-        __professions_data[prof.tag] = {}
-        __professions_data[prof.tag]['name'] = prof.find("name").text
-        __professions_data[prof.tag]['description'] = prof.find("text")
-        __professions_data[prof.tag]['prime_stats'] = []
-        __professions_data[prof.tag]['dev cost'] = {}
-        __professions_data[prof.tag]['realm'] = prof.find("realm")
     __skilllist = __reference.find("skilllist")
     __skillcat = __skilllist.find("categoryskills")
     __categorylist = __skillcat.find("list")
-    __skillcat_data = {}
-    __skillcat_data['categories'] = []
-    catIndex = 0
+    for prof in __professions:
+        __professions_data = {}
+        __professions_data['sources'] = []
+        __professions_data['refs'] = {}
+        __professions_data['name'] = prof.find("name").text
+        __professions_data['description'] = "\n".join(prof.find("text").text)
+        for desc in prof.find("text"):
+            __professions_data['description'] = __professions_data['description'] + desc.text
+        __professions_data['description'] = __professions_data['description'].replace("\n", "").replace("\t", "").strip()
+        __professions_data['prime_stats'] = []
+        __professions_data['dev cost'] = {}
+        __professions_data['realm'] = prof.find("realm").text
+        for skillCat in __categorylist:
+            for cost in skillCat.find("costs"):
+                if (cost.tag == prof.tag):
+                    __professions_data['dev cost'][skillCat.find("fullname").text] = cost.text.split("/")
+        __filename = __DATA + "/professions/" + __professions_data['name'] + ".json"
+        f = open(__filename, 'wb')
+        f.write(json.dumps( __professions_data , indent=3, sort_keys=True))
+        f.close()
     for skillCat in __categorylist:
-        __skillcat_data['categories'].append({})
-        __skillcat_data['categories'][catIndex]['name'] = skillCat.find("fullname").text
-        __skillcat_data['categories'][catIndex]['group'] = skillCat.find("group").text
-        __skillcat_data['categories'][catIndex]['description'] = skillCat.find("description").text
+        __skillcat_data = {}
+        __skillcat_data['sources'] = []
+        __skillcat_data['refs'] = {}
+        __skillcat_data['name'] = skillCat.find("fullname").text
+        __skillcat_data['group'] = skillCat.find("group").text
+        __skillcat_data['description'] = skillCat.find("description").text
         try:
-            __skillcat_data['categories'][catIndex]['stats'] = skillCat.find("stats").text.split("/")
+            __skillcat_data['stats'] = skillCat.find("stats").text.split("/")
         except:
-            __skillcat_data['categories'][catIndex]['stats'] = [ "realm" ]
+            __skillcat_data['stats'] = [ "realm" ]
         __typeInt = int(skillCat.find("type").text)
         __typeString = "SM"
         if (__typeInt == 1): __typeString = "MM"
         elif (__typeInt == 3): __typeString = "OB"
         elif (__typeInt == 4): __typeString = "SP"
         elif (__typeInt == 5): __typeString = "SC"
-        __skillcat_data['categories'][catIndex]['type'] = __typeString
+        __skillcat_data['type'] = __typeString
         __typeInt = int(skillCat.find("calc").text)
-        if (__typeInt == 1): __skillcat_data['categories'][catIndex]['skillprog'] = 2
-        elif (__typeInt == 2): __skillcat_data['categories'][catIndex]['skillprog'] = 3
-        elif (__typeInt == 3): __skillcat_data['categories'][catIndex]['skillprog'] = 1
-        elif (__typeInt == 4): __skillcat_data['categories'][catIndex]['skillprog'] = -1
-        elif (__typeInt == 5): __skillcat_data['categories'][catIndex]['skillprog'] = -1
-        for cost in skillCat.find("costs"):
-            __professions_data[cost.tag]['dev cost'][skillCat.find("fullname").text] = cost.text.split("/")
-        catIndex += 1
+        if (__typeInt == 1): __skillcat_data['skillprog'] = 2
+        elif (__typeInt == 2): __skillcat_data['skillprog'] = 3
+        elif (__typeInt == 3): __skillcat_data['skillprog'] = 1
+        elif (__typeInt == 4): __skillcat_data['skillprog'] = -1
+        elif (__typeInt == 5): __skillcat_data['skillprog'] = -1
+        __filename = __DATA + "/skills/" + __skillcat_data['name'].replace("/", "_") + ".json"
+        f = open(__filename, 'wb')
+        f.write(json.dumps( __skillcat_data , indent=3, sort_keys=True))
+        f.close()
     __racedata = __reference.find("racedata")
-    __race_data = {}
     for race in __racedata.find("list"):
+        __race_data = {}
         raceIndex = race.find("name").text.lower().replace(" ", "").replace("-", "")
-        __race_data[raceIndex] = {}
-        __race_data[raceIndex]["name"] = race.find("name").text
-        __race_data[raceIndex]["plural_name"] = race.find("title").text
-        __race_data[raceIndex]["race_bonus"] = {}
-        __race_data[raceIndex]["race_bonus"]["st"] = int(race.find("statbonuses").find("strength").text)
-        __race_data[raceIndex]["race_bonus"]["qu"] = int(race.find("statbonuses").find("quickness").text)
-        __race_data[raceIndex]["race_bonus"]["pr"] = int(race.find("statbonuses").find("presence").text)
-        __race_data[raceIndex]["race_bonus"]["in"] = int(race.find("statbonuses").find("intuition").text)
-        __race_data[raceIndex]["race_bonus"]["em"] = int(race.find("statbonuses").find("empathy").text)
-        __race_data[raceIndex]["race_bonus"]["co"] = int(race.find("statbonuses").find("constitution").text)
-        __race_data[raceIndex]["race_bonus"]["ag"] = int(race.find("statbonuses").find("agility").text)
-        __race_data[raceIndex]["race_bonus"]["re"] = int(race.find("statbonuses").find("reasoning").text)
-        __race_data[raceIndex]["race_bonus"]["me"] = int(race.find("statbonuses").find("memory").text)
-        __race_data[raceIndex]["race_bonus"]["sd"] = int(race.find("statbonuses").find("selfdiscipline").text)
-        __race_data[raceIndex]["resistances"] = {}
-        __race_data[raceIndex]["resistances"]["essence"] = int(race.find("resistances").find("essence").text)
-        __race_data[raceIndex]["resistances"]["channeling"] = int(race.find("resistances").find("channeling").text)
-        __race_data[raceIndex]["resistances"]["mentalism"] = int(race.find("resistances").find("mentalism").text)
+        __race_data['sources'] = []
+        __race_data['refs'] = {}
+        __race_data["name"] = race.find("name").text
+        __race_data["plural_name"] = race.find("title").text
+        __race_data["race_bonus"] = {}
+        __race_data["race_bonus"]["st"] = int(race.find("statbonuses").find("strength").text)
+        __race_data["race_bonus"]["qu"] = int(race.find("statbonuses").find("quickness").text)
+        __race_data["race_bonus"]["pr"] = int(race.find("statbonuses").find("presence").text)
+        __race_data["race_bonus"]["in"] = int(race.find("statbonuses").find("intuition").text)
+        __race_data["race_bonus"]["em"] = int(race.find("statbonuses").find("empathy").text)
+        __race_data["race_bonus"]["co"] = int(race.find("statbonuses").find("constitution").text)
+        __race_data["race_bonus"]["ag"] = int(race.find("statbonuses").find("agility").text)
+        __race_data["race_bonus"]["re"] = int(race.find("statbonuses").find("reasoning").text)
+        __race_data["race_bonus"]["me"] = int(race.find("statbonuses").find("memory").text)
+        __race_data["race_bonus"]["sd"] = int(race.find("statbonuses").find("selfdiscipline").text)
+        __race_data["resistances"] = {}
+        __race_data["resistances"]["essence"] = int(race.find("resistances").find("essence").text)
+        __race_data["resistances"]["channeling"] = int(race.find("resistances").find("channeling").text)
+        __race_data["resistances"]["mentalism"] = int(race.find("resistances").find("mentalism").text)
         try:
-            __race_data[raceIndex]["resistances"]["arcane"] = int(race.find("resistances").find("arcane").text)
+            __race_data["resistances"]["arcane"] = int(race.find("resistances").find("arcane").text)
         except:
-            __race_data[raceIndex]["resistances"]["arcane"] = 0
-        __race_data[raceIndex]["resistances"]["poison"] = int(race.find("resistances").find("poison").text)
-        __race_data[raceIndex]["resistances"]["disease"] = int(race.find("resistances").find("disease").text)
-        __race_data[raceIndex]["resistances"]["terror"] = int(race.find("resistances").find("terror").text)
-        __race_data[raceIndex]["soul_departure"] = int(race.find("souldep").text)
-        __race_data[raceIndex]["stat_decline"] = int(race.find("statdec").text)
-        __race_data[raceIndex]["recovery_multiplier"] = race.find("recx").text
-        __race_data[raceIndex]["starting_languages"] = int(race.find("languages").text)
-        __race_data[raceIndex]["base_move"] = int(race.find("bmr").text)
-        __race_data[raceIndex]["max_hits"] = int(race.find("maxhits").text)
-        __race_data[raceIndex]['adolescence'] = {}
-    __adolescence = __reference.find("adolescence")
-    for ad in __adolescence.find("list"):
-        for r in ad.find("rank"):
-            __race_data[r.tag]['adolescence'][ad.find("name").text] = int(r.text)
+            __race_data["resistances"]["arcane"] = 0
+        __race_data["resistances"]["poison"] = int(race.find("resistances").find("poison").text)
+        __race_data["resistances"]["disease"] = int(race.find("resistances").find("disease").text)
+        __race_data["resistances"]["terror"] = int(race.find("resistances").find("terror").text)
+        __race_data["soul_departure"] = int(race.find("souldep").text)
+        __race_data["stat_decline"] = int(race.find("statdec").text)
+        __race_data["recovery_multiplier"] = race.find("recx").text
+        __race_data["starting_languages"] = int(race.find("languages").text)
+        __race_data["base_move"] = int(race.find("bmr").text)
+        __race_data["max_hits"] = int(race.find("maxhits").text)
+        __race_data['adolescence'] = {}
+        __adolescence = __reference.find("adolescence")
+        for ad in __adolescence.find("list"):
+            for r in ad.find("rank"):
+                if (r.tag == raceIndex):
+                    __race_data['adolescence'][ad.find("name").text] = int(r.text)
+        __filename = __DATA + "/races/"+raceIndex+".json"
+        f = open(__filename, 'wb')
+        f.write(json.dumps( __race_data , indent=3, sort_keys=True))
+        f.close()
     for npc in __reference.find("npcs"):
         __npc_data = {}
         __dirname = __DATA + 'npc/' + npc.find("group").text
@@ -235,7 +258,10 @@ try:
             except:
                 os.mkdir(__dirname)
         __filename = __dirname +"/"+ npc.find("name").text +".json"
+        __npc_data['sources'] = []
+        __npc_data['refs'] = {}
         __npc_data["name"] = npc.find("name").text
+        __npc_data["sources"] = []
         __npc_data["group"] = npc.find("group").text
         __npc_data["subgroup"] = npc.find("subgroup").text
         __npc_data["level"] = int(npc.find("level").text)
@@ -249,15 +275,91 @@ try:
             __npc_data["profession"] = npc.find("profession").text
         except:
             pass
+        __npc_data["abilities"] = []
+        for a in npc.find("abilities"):
+            __npc_data["abilities"].append(a.text)
+        __npc_data["defences"] = []
+        for d in npc.find("defences"):
+            __my_value = {}
+            __my_value['name'] = d.find("name").text
+            try:
+                __my_value['melee_bonus'] = int(d.find("meleebonus").text)
+            except:
+                pass
+            try:
+                __my_value['missile_bonus'] = int(d.find("missilebonus").text)
+            except:
+                pass
+            __npc_data["defences"].append(__my_value)
         try:
-            __npc_data["defences"] = npc.find("defences").text
+            __npc_data["levelcode"] = npc.find("levelcode").text
         except:
-            pass
+            __npc_data["levelcode"] = None
+        try:
+            __npc_data["hitscode"] = npc.find("hitscode").text
+        except:
+            __npc_data["hitscode"] = None
+        try:
+            __npc_data["ms"] = int(npc.find("ms").text)
+        except:
+            __npc_data["ms"] = None
+        try:
+            __npc_data["aq"] = int(npc.find("aq").text)
+        except:
+            __npc_data["aq"] = None
+        try:
+            __npc_data["critmod"] = npc.find("critmod").text
+        except:
+            __npc_data["critmod"] = None
+        try:
+            __npc_data["imunity"] = npc.find("imunity").text
+        except:
+            __npc_data["imunity"] = None
+        try:
+            __npc_data["num"] = npc.find("num").text
+        except:
+            __npc_data["num"] = None
+        try:
+            __npc_data["treasure"] = npc.find("treasure").text
+        except:
+            __npc_data["treasure"] = None
+        try:
+            __npc_data["bonusep"] = npc.find("bonusep").text
+        except:
+            __npc_data["bonusep"] = None
+        try:
+            __npc_data["outlook"] = npc.find("outlook").text
+        except:
+            __npc_data["outlook"] = None
+        try:
+            __npc_data["iq"] = int(npc.find("iq").text)
+        except:
+            __npc_data["iq"] = None
+        try:
+            __npc_data["climate"] = npc.find("climate").text
+        except:
+            __npc_data["climate"] = None
+        try:
+            __npc_data["locale"] = npc.find("locale").text
+        except:
+            __npc_data["locale"] = None
+        try:
+            __npc_data["freq"] = int(npc.find("freq").text)
+        except:
+            __npc_data["freq"] = None
+        try:
+            __npc_data["description"] = npc.find("description").text
+        except:
+            __npc_data["description"] = None
+        try:
+            __npc_data["notes"] = npc.find("notes").text
+        except:
+            __npc_data["notes"] = None
         __npc_data["attacks"] = []
         try:
             for attack in npc.find("weapons"):
                 __my_value = {}
-                __my_value['OB'] = attack.find("ob").text
+                __my_value['OB'] = int(attack.find("ob").text)
                 __my_value['name'] = attack.find("name").text
                 __my_value['type'] = int(attack.find("type").text)
                 try:
@@ -271,15 +373,20 @@ try:
         for skill in npc.find("skills"):
             __my_value = {}
             __my_value['name'] = skill.find("name").text
-            __my_value['bonus'] = skill.find("bonus").text
+            __my_value['bonus'] = int(skill.find("bonus").text)
             try:
-                __my_value['ranks'] = skill.find("ranks").text
+                __my_value['ranks'] = int(skill.find("ranks").text)
             except:
                 __my_value['ranks'] = None
             __npc_data["skills"].append(__my_value)
+        __npc_data["spells"] = []
+        for spell in npc.find("spells"):
+            __my_value = {}
+            __my_value['name'] = skill.find("name").text
+            __npc_data["spells"].append(__my_value)
         f = open(__filename, 'wb')
         f.write(json.dumps( __npc_data , indent=3, sort_keys=True))
         f.close()
 except:
-    raise
+#    raise
     pass
