@@ -367,6 +367,11 @@ try:
                 __my_value['name'] = attack.find("name").text
                 __my_value['type'] = int(attack.find("type").text)
                 __my_value['usage'] = None
+                __my_value['sequence_same_round'] = None
+                __my_value['sequence_next_round'] = None
+                __my_value['group_attack'] = None
+                __my_value['multi_attack'] = None
+                __my_value['critical'] = None
                 try:
                     __my_value["table"] = [ attack.find("attacktable").find("tableid").text, attack.find("attacktable").find("name").text]
                 except:
