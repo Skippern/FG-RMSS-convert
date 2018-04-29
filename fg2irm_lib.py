@@ -292,6 +292,10 @@ try:
                 pass
             __npc_data["defences"].append(__my_value)
         try:
+            __npc_data["maxpace"] = int(npc.find("maxpace").text)
+        except:
+            __npc_data["maxpace"] = None
+        try:
             __npc_data["levelcode"] = npc.find("levelcode").text
         except:
             __npc_data["levelcode"] = None
@@ -362,6 +366,7 @@ try:
                 __my_value['OB'] = int(attack.find("ob").text)
                 __my_value['name'] = attack.find("name").text
                 __my_value['type'] = int(attack.find("type").text)
+                __my_value['usage'] = None
                 try:
                     __my_value["table"] = [ attack.find("attacktable").find("tableid").text, attack.find("attacktable").find("name").text]
                 except:
