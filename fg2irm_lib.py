@@ -9,6 +9,7 @@
 import argparse
 import os
 import json
+import re
 from lxml import etree
 
 parser = argparse.ArgumentParser(description='Convert from an FG xml to irm_lib')
@@ -32,6 +33,30 @@ elif (args.silent):
 def printf(text, level=1):
     if (__OUTPUT >= level):
         print text
+
+def eqtype(type):
+    if (type == 0): return "unknown"
+    elif (type == 1): return "weapon_1he"
+    elif (type == 2): return "weapon_1hc"
+    elif (type == 3): return "weapon_2h"
+    elif (type == 4): return "weapon_pa"
+    elif (type == 5): return "weapon_mis"
+    elif (type == 6): return "weapon_th"
+    elif (type == 7): return "shield"
+    elif (type == 11): return "accessory"
+    elif (type == 12): return "armor"
+    elif (type == 13): return "herb"
+    elif (type == 17): return "food"
+    elif (type == 18): return "lodging"
+    elif (type == 19): return "transport"
+    elif (type == 20): return "service"
+
+    elif (type == 131): return "herb"
+    elif (type == 132): return "bread"
+    elif (type == 133): return "intox"
+    elif (type == 134): return "poison"
+
+    return "unknown"
 
 printf('__OUTPUT {0}'.format(__OUTPUT), 3)
 
@@ -146,6 +171,19 @@ except:
 
 try:
     __reference = root.find("reference")
+    for tbl in __reference.find("tables"):
+        if (tbl.tag == "purchasepricechart"):
+            print "GL 12.4.2 (Purchase)"
+        if (tbl.tag == "resalepricechart"):
+            print "GL 12.4.2 (Resale)"
+        if (tbl.tag == "findingaherbpoisoninthewild"):
+            print "Dunno"
+
+#        __filename = __DATA + 'tables/' + table.tag + '.json'
+#        f = open(__filename, 'wb')
+#        f.write(json.dumps( __table_data , indent=3, sort_keys=True))
+#        f.close()
+
     __professions = __reference.find("professions")
     __skilllist = __reference.find("skilllist")
     __skillcat = __skilllist.find("categoryskills")
@@ -176,7 +214,7 @@ try:
         __skillcat_data['refs'] = {}
         __skillcat_data['name'] = skillCat.find("fullname").text
         __skillcat_data['group'] = skillCat.find("group").text
-        __skillcat_data['description'] = skillCat.find("description").text
+        __skillcat_data['description'] = skillCat.find("description").text.replace("\n", "").replace("\t", "").strip()
         try:
             __skillcat_data['stats'] = skillCat.find("stats").text.split("/")
         except:
@@ -206,6 +244,7 @@ try:
         __race_data['refs'] = {}
         __race_data["name"] = race.find("name").text
         __race_data["plural_name"] = race.find("title").text
+        __race_data['description'] = None
         __race_data["race_bonus"] = {}
         __race_data["race_bonus"]["st"] = int(race.find("statbonuses").find("strength").text)
         __race_data["race_bonus"]["qu"] = int(race.find("statbonuses").find("quickness").text)
@@ -399,6 +438,242 @@ try:
         f = open(__filename, 'wb')
         f.write(json.dumps( __npc_data , indent=3, sort_keys=True))
         f.close()
+    __price_destination = [ "town", "city", "rural"]
+    for eqlist in __reference.find("equipment"):
+        errNo = 0
+#        print eqlist.tag
+        for eq in eqlist.find("list"):
+            __eq = {}
+            __eq['sources'] = []
+            __eq['refs'] = {}
+            __eq['listing'] = "default"
+            try:
+                __eq['id'] = int(eq.find("inum").text)
+            except:
+                __eq['id'] = 0
+            try:
+                __eq['type'] = int(eq.find("type").text)
+                if (__eq['type'] == 13 or __eq['type'] == 17):
+                    if (eq.tag.find("herb") > -1):
+                        __eq['type'] = 131
+                    elif (eq.tag.find("bread") > -1):
+                        __eq['type'] = 132
+                    elif (eq.tag.find("intox") > -1):
+                        __eq['type'] = 133
+                    elif (eq.tag.find("poison") > -1):
+                        __eq['type'] = 134
+            except:
+                __eq['type'] = 0
+            __group = eqtype(__eq['type'])
+            __eq['group'] = __group
+            try:
+                __eq['id'] = int(eq.find("inum").text)
+            except:
+                try:
+                    __eq['name'] = eq.find("inum").text
+                except:
+                    pass
+                __eq['id'] = 0
+            try:
+                __eq['name'] = eq.find("name").text
+            except:
+                __eq['name'] = eq.tag
+            try:
+                __eq['length'] = float(eq.find("length").text)
+            except:
+                __eq['length'] = None
+            try:
+                __eq['length_str'] = eq.find("length_s").text
+            except:
+                __eq['length_str'] = None
+            try:
+                __eq['weight'] = float(eq.find("weight").text)
+            except:
+                __eq['weight'] = None
+            try:
+                __eq['weight_str'] = eq.find("weight_s").text
+            except:
+                __eq['weight_str'] = None
+            try:
+                __eq['description'] = eq.find("description").text.replace("\n", "").replace("\t", "").strip()
+            except:
+                __eq['description'] = None
+                pass
+            try:
+                __eq['production_time'] = eq.find("prod").text
+            except:
+                __eq['production_time'] = None
+            try:
+                __eq['AT'] = int(eq.find("armortype").text)
+            except:
+                __eq['AT'] = None
+            try:
+                __eq['strength'] = int(eq.find("strength").text)
+            except:
+                __eq['strength'] = None
+            try:
+                __eq['breakfactor'] = eq.find("breakfactor").text
+            except:
+                __eq['breakfactor'] = None
+            try:
+                __eq['level'] = eq.find("level").text
+            except:
+                __eq['level'] = None
+            try:
+                __eq['charges'] = eq.find("charges").text
+            except:
+                __eq['charges'] = None
+            try:
+                __eq['composition'] = eq.find("composition").text
+            except:
+                __eq['composition'] = None
+            try:
+                __eq['use'] = eq.find("use").text
+            except:
+                __eq['use'] = None
+            try:
+                __eq['size'] = eq.find("size").text
+            except:
+                __eq['size'] = None
+            try:
+                __eq['OB'] = eq.find("ob").text
+            except:
+                __eq['OB'] = None
+            try:
+                __eq['capacity'] = eq.find("capacity").text
+            except:
+                __eq['capacity'] = None
+            try:
+                __eq['ft/rnd'] = eq.find("ftrn").text
+            except:
+                __eq['ft/rnd'] = None
+            try:
+                __eq['mi/hr'] = eq.find("mihr").text
+            except:
+                __eq['mi/hr'] = None
+            try:
+                __eq['maneuver bonus'] = eq.find("mnb").text
+            except:
+                __eq['maneuver bonus'] = None
+            try:
+                __eq['ht/wt'] = eq.find("htwt").text
+            except:
+                __eq['ht/wt'] = None
+            try:
+                __eq['fumble'] = eq.find("fumble").text
+            except:
+                __eq['fumble'] = None
+            try:
+                __eq['range_mod'] = {}
+                __eq['range_mod']["point blank"] = (int(eq.find("rng1").text), int(eq.find("mod1").text) )
+                __eq['range_mod']["short"] = (int(eq.find("rng2").text), int(eq.find("mod2").text) )
+                __eq['range_mod']["medium"] = (int(eq.find("rng3").text), int(eq.find("mod3").text) )
+                __eq['range_mod']["long"] = (int(eq.find("rng4").text), int(eq.find("mod4").text) )
+                __eq['range_mod']["extreme"] = (int(eq.find("rng5").text), int(eq.find("mod5").text) )
+            except:
+                __eq['range_mod'] = None
+            try:
+                __eq['attack table'] = [ eq.find("attacktable").find("tableid").text, eq.find("attacktable").find("name").text]
+            except:
+                __eq['attack table'] = None
+            try:
+                __eq['armor_mod'] = {}
+                __eq['armor_mod']['plate'] = int(eq.find("at17_20").text)
+                __eq['armor_mod']['chain mail'] = int(eq.find("at13_16").text)
+                __eq['armor_mod']['rigid leather'] = int(eq.find("at9_12").text)
+                __eq['armor_mod']['soft leather'] = int(eq.find("at5_8").text)
+                __eq['armor_mod']['skin'] = int(eq.find("at1_4").text)
+                __eq['armor_mod']['flak'] = None
+            except:
+                __eq['armor_mod'] = None
+            try:
+                tmp = int(eq.find("rngslots").text)
+                if (tmp == 1): __eq['maxrange'] = "point blank"
+                elif (tmp == 2): __eq['maxrange'] = "short"
+                elif (tmp == 3): __eq['maxrange'] = "medium"
+                elif (tmp == 4): __eq['maxrange'] = "long"
+                elif (tmp == 5): __eq['maxrange'] = "extreme"
+                else: __eq['maxrange'] = tmp
+            except:
+                __eq['maxrange'] = None
+            try:
+                __eq['special'] = eq.find("special").text
+            except:
+                __eq['special'] = None
+            try:
+                __eq['area of effect'] = eq.find("aoe").text
+            except:
+                __eq['area of effect'] = None
+            try:
+                __eq['form'] = eq.find("form").text.lower().split("/")[0]
+                __eq['prep'] = eq.find("form").text.lower().split("/")[1]
+            except:
+                __eq['form'] = None
+                __eq['prep'] = None
+            try:
+                __eq['climate'] = eq.find("codes").text.split("-")[0]
+                __eq['locale'] = eq.find("codes").text.split("-")[1]
+                __eq['find_diff'] = eq.find("codes").text.split("-")[2]
+            except:
+                __eq['climate'] = None
+                __eq['locale'] = None
+                __eq['find_diff'] = None
+            try:
+                __eq['effect'] = eq.find("effect").text
+            except:
+                __eq['effect'] = None
+            __eq['AF'] = None
+            try:
+                if (__eq['effect'].find("AF") == 0):
+                    __eq['AF'] = int(re.findall("\d+", __eq['effect'])[0])
+            except:
+                pass
+            try:
+                if ((__eq['level'] == None) and (__eq['effect'].lower().find("(lvl") > -1)):
+                    __eq['level'] = int(re.findall("\d+", __eq['effect'])[0])
+            except:
+                pass
+            __eq['price'] = None
+            for savefile in __price_destination:
+                __eq['available'] = savefile
+                try:
+                    __eq['price'] = eq.find(savefile).text
+                except:
+                    continue
+                if (__eq['price'] == "-"):
+                    continue
+                __dirname = __DATA + "eq/"
+                try:
+                    os.stat(__dirname)
+                except:
+                    os.mkdir(__dirname)
+                __dirname = __DATA + "eq/default/"
+                try:
+                    os.stat(__dirname)
+                except:
+                    os.mkdir(__dirname)
+                __dirname = __DATA + "eq/default/" + savefile + "/"
+                try:
+                    os.stat(__dirname)
+                except:
+                    os.mkdir(__dirname)
+                __dirname = __DATA + "eq/default/" + savefile + "/" + __group + "/"
+                try:
+                    os.stat(__dirname)
+                except:
+                    os.mkdir(__dirname)
+                try:
+                    __file_name = eq.find("name").text.lower().replace("(", "_").replace(")", "_").replace("/", "_").replace("*", "").replace("'", "").replace(" ", "")
+                except:
+                    __file_name = "error"+errNo
+                    errNo = errNo + 1
+                __filename = __dirname + __file_name + ".json"
+                f = open(__filename, 'wb')
+                f.write(json.dumps( __eq , indent=3, sort_keys=True))
+                f.close()
+#            if (__group == "unknown"):
+#                print eq.tag, __eq['id'], __eq['name'], __eq['type'], __group
+            
 except:
-#    raise
-    pass
+    raise
+#    pass
