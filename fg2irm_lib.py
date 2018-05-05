@@ -563,6 +563,7 @@ try:
                 __eq['fumble'] = eq.find("fumble").text
             except:
                 __eq['fumble'] = None
+	    __eq['threshold'] = None
             try:
                 __eq['range_mod'] = {}
                 __eq['range_mod']["point blank"] = (int(eq.find("rng1").text), int(eq.find("mod1").text) )
